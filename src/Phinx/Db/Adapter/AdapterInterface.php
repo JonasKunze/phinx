@@ -77,6 +77,13 @@ interface AdapterInterface
     public function getVersions();
 
     /**
+     * Get last migrated version number.
+     *
+     * @return int
+     */
+    public function getLastVersion();
+
+    /**
      * Set adapter configuration options.
      *
      * @param  array $options

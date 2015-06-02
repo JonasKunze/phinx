@@ -192,6 +192,14 @@ abstract class AdapterWrapper implements AdapterInterface, WrapperInterface
     /**
      * {@inheritdoc}
      */
+    public function getLastVersion()
+    {
+        return $this->getAdapter()->getLastVersion();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function migrated(MigrationInterface $migration, $direction, $startTime, $endTime)
     {
         $this->getAdapter()->migrated($migration, $direction, $startTime, $endTime);

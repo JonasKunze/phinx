@@ -368,20 +368,31 @@ abstract class PdoAdapter implements AdapterInterface
     /**
      * {@inheritdoc}
      */
+    public function getLastVersion()
+    {
+        $rows = $this->fetchRow(sprintf('SELECT COALESCE(MAX(`version`), 0) AS version FROM %s', $this->getSchemaTableName()));
+        return $rows['version'];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function migrated(MigrationInterface $migration, $direction, $startTime, $endTime)
     {
         if (strcasecmp($direction, MigrationInterface::UP) === 0) {
             // up
             $sql = sprintf(
                 'INSERT INTO %s ('
-                . 'version, start_time, end_time'
+                . 'version, name, start_time, end_time'
                 . ') VALUES ('
+                . '\'%s\','
                 . '\'%s\','
                 . '\'%s\','
                 . '\'%s\''
                 . ');',
                 $this->getSchemaTableName(),
-                $migration->getVersion(),
+                $this->getLastVersion()+1,
+                $migration->getName(),
                 $startTime,
                 $endTime
             );
@@ -421,6 +432,7 @@ abstract class PdoAdapter implements AdapterInterface
 
             $table = new Table($this->getSchemaTableName(), $options, $this);
             $table->addColumn('version', 'biginteger')
+                  ->addColumn('name', 'string')
                   ->addColumn('start_time', 'timestamp')
                   ->addColumn('end_time', 'timestamp')
                   ->save();
