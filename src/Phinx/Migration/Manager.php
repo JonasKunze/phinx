@@ -149,43 +149,22 @@ class Manager
         }
 
         if (null === $version) {
-            $version = max(array_merge($versions, array_keys($migrations)));
+            # Migrate all versions that have not been migrated yet
+            foreach ($migrations as $migration) {
+                if (!in_array($migration->getVersion(), $versions)) {
+                    $this->executeMigration($environment, $migration, MigrationInterface::UP);
+                }
+            }
         } else {
-            if (0 != $version && !isset($migrations[$version])) {
+            if (!isset($migrations[$version])) {
                 $this->output->writeln(sprintf(
-                    '<comment>warning</comment> %s is not a valid version',
+                    '<comment>warning</comment> %s is not a valid migration',
                     $version
                 ));
                 return;
             }
-        }
-
-        // are we migrating up or down?
-        $direction = $version > $current ? MigrationInterface::UP : MigrationInterface::DOWN;
-
-        if ($direction == MigrationInterface::DOWN) {
-            // run downs first
-            krsort($migrations);
-            foreach ($migrations as $migration) {
-                if ($migration->getVersion() <= $version) {
-                    break;
-                }
-
-                if (in_array($migration->getVersion(), $versions)) {
-                    $this->executeMigration($environment, $migration, MigrationInterface::DOWN);
-                }
-            }
-        }
-
-        ksort($migrations);
-        foreach ($migrations as $migration) {
-            if ($migration->getVersion() > $version) {
-                break;
-            }
-
-            if (!in_array($migration->getVersion(), $versions)) {
-                $this->executeMigration($environment, $migration, MigrationInterface::UP);
-            }
+            # Only migrate the specified migration
+            $this->executeMigration($environment, $migrations[$version], MigrationInterface::UP);
         }
     }
 
@@ -272,6 +251,33 @@ class Manager
             if (in_array($migration->getVersion(), $versions)) {
                 $this->executeMigration($environment, $migration, MigrationInterface::DOWN);
             }
+        }
+    }
+
+    /**
+     * Rollback an environment to the specified version.
+     *
+     * @param string $environment Environment
+     * @param int $version
+     * @return void
+     */
+    public function revert($environment, $version)
+    {
+        $migrations = $this->getMigrations();
+        $env = $this->getEnvironment($environment);
+        $versions = $env->getVersions();
+
+        // Check the target version exists
+        if (!isset($migrations[$version])) {
+            $this->getOutput()->writeln("<error>Target version ($version) not found</error>");
+            return;
+        }
+
+        // Revert the migration(s)
+
+        $migration = $migrations[$version];
+        if (in_array($migration->getVersion(), $versions)) {
+            $this->executeMigration($environment, $migration, MigrationInterface::DOWN);
         }
     }
 
