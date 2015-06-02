@@ -356,13 +356,12 @@ abstract class PdoAdapter implements AdapterInterface
      */
     public function getVersions()
     {
-        $rows = $this->fetchAll(sprintf('SELECT * FROM %s ORDER BY version ASC', $this->getSchemaTableName()));
-        return array_map(
-            function ($v) {
-                return $v['version'];
-            },
-            $rows
-        );
+        $rows = $this->fetchAll(sprintf('SELECT version, name FROM %s ORDER BY version ASC', $this->getSchemaTableName()));
+        $res = array();
+        foreach($rows as $row){
+            $res[$row['version']]=$row['name'];
+        }
+        return $res;
     }
 
     /**
@@ -370,7 +369,7 @@ abstract class PdoAdapter implements AdapterInterface
      */
     public function getLastVersion()
     {
-        $rows = $this->fetchRow(sprintf('SELECT COALESCE(MAX(`version`), 0) AS version FROM %s', $this->getSchemaTableName()));
+        $rows = $this->fetchRow(sprintf('SELECT COALESCE(MAX(`version`), -1) AS version FROM %s', $this->getSchemaTableName()));
         return $rows['version'];
     }
 
