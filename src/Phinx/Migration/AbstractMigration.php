@@ -45,11 +45,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 abstract class AbstractMigration implements MigrationInterface
 {
     /**
-     * @var float
-     */
-    protected $version;
-
-    /**
      * @var AdapterInterface
      */
     protected $adapter;
@@ -63,11 +58,9 @@ abstract class AbstractMigration implements MigrationInterface
     /**
      * Class Constructor.
      *
-     * @param int $version Migration Version
      */
-    final public function __construct($version)
+    final public function __construct()
     {
-        $this->version = $version;
         $this->init();
     }
 
@@ -139,18 +132,10 @@ abstract class AbstractMigration implements MigrationInterface
     /**
      * {@inheritdoc}
      */
-    public function setVersion($version)
-    {
-        $this->version = $version;
-        return $this;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function getVersion()
     {
-        return $this->version;
+        $rows = $this->fetchRow(sprintf('SELECT COALESCE(MAX(`version`), -1) AS version FROM %s WHERE name=\'%s\'',  $this->getAdapter()->getSchemaTableName(), $this->getName()));
+        return $rows['version'];
     }
 
     /**

@@ -70,7 +70,7 @@ interface AdapterInterface
     const PHINX_TYPE_SET            = 'set';
 
     /**
-     * Get all migrated version numbers.
+     * Get all migrated version numbers with corresponding migration names.
      *
      * @return array
      */

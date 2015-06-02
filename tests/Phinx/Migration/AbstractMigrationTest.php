@@ -55,14 +55,6 @@ class AbstractMigrationTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse(!(strpos($migrationStub->getName(), 'AbstractMigration')));
     }
 
-    public function testVersionMethods()
-    {
-        $migrationStub = $this->getMockForAbstractClass('\Phinx\Migration\AbstractMigration', array(20120103080000));
-        $this->assertEquals(20120103080000, $migrationStub->getVersion());
-        $migrationStub->setVersion(20120915093312);
-        $this->assertEquals(20120915093312, $migrationStub->getVersion());
-    }
-
     public function testExecute()
     {
         // stub migration

@@ -107,14 +107,6 @@ interface MigrationInterface
     public function getName();
 
     /**
-     * Sets the migration version number.
-     *
-     * @param float $version Version
-     * @return MigrationInterface
-     */
-    public function setVersion($version);
-
-    /**
      * Gets the migration version number.
      *
      * @return float

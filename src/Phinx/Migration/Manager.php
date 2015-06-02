@@ -87,13 +87,13 @@ class Manager
             $versions = $env->getVersions();
 
             foreach ($this->getMigrations() as $migration) {
-                if (in_array($migration->getVersion(), $versions)) {
+                $migration->setAdapter($env->getAdapter());
+                if (array_key_exists($migration->getVersion(), $versions)) {
                     $status = '     <info>up</info> ';
-                    unset($versions[array_search($migration->getVersion(), $versions)]);
+                    unset($versions[$migration->getVersion()]);
                 } else {
                     $status = '   <error>down</error> ';
                 }
-
                 $output->writeln(
                     $status
                     . sprintf(' %14.0f ', $migration->getVersion())
@@ -151,7 +151,8 @@ class Manager
         if (null === $version) {
             # Migrate all versions that have not been migrated yet
             foreach ($migrations as $migration) {
-                if (!in_array($migration->getVersion(), $versions)) {
+                $migration->setAdapter($env->getAdapter());
+                if (!isset($versions[$migration->getVersion()])) {
                     $this->executeMigration($environment, $migration, MigrationInterface::UP);
                 }
             }
@@ -211,8 +212,7 @@ class Manager
         $env = $this->getEnvironment($environment);
         $versions = $env->getVersions();
 
-        ksort($migrations);
-        sort($versions);
+        ksort($versions);
 
         // Check we have at least 1 migration to revert
         if (empty($versions) || $version == end($versions)) {
@@ -224,33 +224,35 @@ class Manager
         if (null === $version) {
             // Get the migration before the last run migration
             $prev = count($versions) - 2;
-            $version = $prev >= 0 ? $versions[$prev] : 0;
+            $version = $prev >= 0 ? $versions[$prev] : -1;
         } else {
             // Get the first migration number
-            $first = reset($versions);
+            reset($versions);
+            $first = key($versions);
 
             // If the target version is before the first migration, revert all migrations
             if ($version < $first) {
-                $version = 0;
+                $version = -1;
             }
         }
 
         // Check the target version exists
-        if (0 !== $version && !isset($migrations[$version])) {
+        if (-1 !== $version && !isset($migrations[$versions[$version]])) {
             $this->getOutput()->writeln("<error>Target version ($version) not found</error>");
             return;
         }
 
         // Revert the migration(s)
-        krsort($migrations);
-        foreach ($migrations as $migration) {
-            if ($migration->getVersion() <= $version) {
+        krsort($versions);
+        foreach ($versions as $migrationVersion => $migrationName) {
+            $migration = $migrations[$migrationName];
+            $migration->setAdapter($env->getAdapter());
+
+            if ($migrationVersion <= $version) {
                 break;
             }
 
-            if (in_array($migration->getVersion(), $versions)) {
-                $this->executeMigration($environment, $migration, MigrationInterface::DOWN);
-            }
+            $this->executeMigration($environment, $migration, MigrationInterface::DOWN);
         }
     }
 
