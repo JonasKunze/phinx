@@ -23,9 +23,9 @@ class UtilTest extends \PHPUnit_Framework_TestCase
     public function testMapClassNameToFileName()
     {
         $expectedResults = array(
-            'CamelCase87afterSomeBooze'   => '/^\d{14}_camel_case87after_some_booze\.php$/',
-            'CreateUserTable'             => '/^\d{14}_create_user_table\.php$/',
-            'LimitResourceNamesTo30Chars' => '/^\d{14}_limit_resource_names_to30_chars\.php$/'
+            'CamelCase87afterSomeBooze'   => '/^camel_case87after_some_booze\.php$/',
+            'CreateUserTable'             => '/^create_user_table\.php$/',
+            'LimitResourceNamesTo30Chars' => '/^limit_resource_names_to30_chars\.php$/'
         );
 
         foreach ($expectedResults as $input => $expectedResult) {
@@ -36,7 +36,7 @@ class UtilTest extends \PHPUnit_Framework_TestCase
     public function testMapFileNameToClassName()
     {
         $expectedResults = array(
-            '20150601153940_camel_case87after_some_booze.php' => '/^CamelCase87afterSomeBooze$/'
+            'camel_case87after_some_booze.php' => '/^CamelCase87afterSomeBooze$/'
         );
 
         foreach ($expectedResults as $input => $expectedResult) {
@@ -46,9 +46,9 @@ class UtilTest extends \PHPUnit_Framework_TestCase
 
     public function testIsValidMigrationFilePath(){
         $expectedResults = array(
-            '/some/path/20150601153656_create_user_table.php'         => true,
-            '/some/Other Path/20150601153656_another_migration.php'   => true,
-            '/some/ugly/path/20150601153656_das_ist_unschön.php'   => false
+            '/some/path/create_user_table.php'         => true,
+            '/some/Other Path/another_migration.php'   => true,
+            '/some/ugly/path/das_ist_unschön.php'   => false
         );
 
 
@@ -59,7 +59,7 @@ class UtilTest extends \PHPUnit_Framework_TestCase
 
     public function testGetVersionFromMigrationFilePath(){
         $expectedResults = array(
-            '20150601153940_some_migration.php' => '/^20150601153940$/'
+            'some_migration.php' => '/^SomeMigration/'
         );
 
         foreach ($expectedResults as $input => $expectedResult) {

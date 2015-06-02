@@ -58,7 +58,7 @@ class Util
     {
         $arr = preg_split('/(?=[A-Z])/', $className);
         unset($arr[0]); // remove the first element ('')
-        $fileName = static::getCurrentTimestamp() . '_' . strtolower(implode($arr, '_')) . '.php';
+        $fileName = strtolower(implode($arr, '_')) . '.php';
         return $fileName;
     }
 
@@ -70,8 +70,7 @@ class Util
      */
     public static function mapFileNameToClassName($fileName)
     {
-        $class = preg_replace('/^[0-9]+_/', '', $fileName);
-        $class = str_replace('_', ' ', $class);
+        $class = str_replace('_', ' ', $fileName);
         $class = ucwords($class);
         $class = str_replace(' ', '', $class);
         if (false !== strpos($class, '.')) {
@@ -91,7 +90,7 @@ class Util
      * @return boolean true if and only if $filePath is a valid path to a migration file
      */
     public static function isValidMigrationFilePath($filePath){
-        return preg_match('/([0-9]+)_([_a-z0-9]*).php/', basename($filePath));
+        return preg_match('/^([_a-z0-9]+).php/', basename($filePath));
     }
 
     /**
@@ -101,9 +100,7 @@ class Util
      * @return string version of the migration corresponding to the given file path
      */
     public static function getVersionFromMigrationFilePath($filePath){
-        $matches = array();
-        preg_match('/^[0-9]+/', basename($filePath), $matches); // get the version from the start of the filename
-        return $matches[0];
+        return Util::mapFileNameToClassName(basename($filePath));
     }
 
     /**
