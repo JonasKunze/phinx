@@ -277,8 +277,9 @@ class Manager
 
         // Revert the migration(s)
 
-        $migration = $migrations[$version];
-        if (in_array($migration->getVersion(), $versions)) {
+        if (isset($migrations[$version])) {
+            $migration = $migrations[$version];
+            $migration->setAdapter($env->getAdapter());
             $this->executeMigration($environment, $migration, MigrationInterface::DOWN);
         }
     }
