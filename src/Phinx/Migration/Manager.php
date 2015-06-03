@@ -165,6 +165,7 @@ class Manager
                 return;
             }
             # Only migrate the specified migration
+            $migrations[$version]->setAdapter($env->getAdapter());
             $this->executeMigration($environment, $migrations[$version], MigrationInterface::UP);
         }
     }
@@ -223,8 +224,10 @@ class Manager
         // If no target version was supplied, revert the last migration
         if (null === $version) {
             // Get the migration before the last run migration
-            $prev = count($versions) - 2;
-            $version = $prev >= 0 ? $versions[$prev] : -1;
+            end($versions);
+            prev($versions);
+            $version = key($versions);
+            reset($versions);
         } else {
             // Get the first migration number
             reset($versions);
