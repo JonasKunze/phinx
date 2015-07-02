@@ -28,7 +28,6 @@
  */
 namespace Phinx\Console\Command;
 
-use Phinx\Migration\CreationInterface;
 use Phinx\Migration\Util;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -52,7 +51,7 @@ class Create extends AbstractCommand
 
         $this->setName('create')
             ->setDescription('Create a new migration')
-            ->addArgument('name', InputArgument::REQUIRED, 'What is the name of the migration?')
+            ->addArgument('name', InputArgument::IS_ARRAY | InputArgument::REQUIRED, 'What is the name of the migration?')
             ->setHelp(sprintf(
                 '%sCreates a new database migration%s',
                 PHP_EOL,
@@ -95,7 +94,7 @@ class Create extends AbstractCommand
         $path = $this->getConfig()->getMigrationPath();
 
         if (!file_exists($path)) {
-            $helper   = $this->getHelper('question');
+            $helper = $this->getHelper('question');
             $question = $this->getCreateMigrationDirectoryQuestion();
 
             if ($helper->ask($input, $output, $question)) {
@@ -106,98 +105,99 @@ class Create extends AbstractCommand
         $this->verifyMigrationDirectory($path);
 
         $path = realpath($path);
-        $className = $input->getArgument('name');
+        foreach ($input->getArgument('name') as $className) {
 
-        if (!Util::isValidMigrationClassName($className)) {
-            throw new \InvalidArgumentException(sprintf(
-                'The migration class name "%s" is invalid. Please use CamelCase format.',
-                $className
-            ));
-        }
-
-        // Compute the file path
-        $fileName = Util::mapClassNameToFileName($className);
-        $filePath = $path . DIRECTORY_SEPARATOR . $fileName;
-
-        if (is_file($filePath)) {
-            throw new \InvalidArgumentException(sprintf(
-                'The file "%s" already exists',
-                $filePath
-            ));
-        }
-
-        // Get the alternative template and static class options, but only allow one of them.
-        $altTemplate = $input->getOption('template');
-        $creationClassName = $input->getOption('class');
-        if ($altTemplate && $creationClassName) {
-            throw new \InvalidArgumentException('Cannot use --template and --class at the same time');
-        }
-
-        // Verify the alternative template file's existence.
-        if ($altTemplate && !is_file($altTemplate)) {
-            throw new \InvalidArgumentException(sprintf(
-                'The alternative template file "%s" does not exist',
-                $altTemplate
-            ));
-        }
-
-        // Verify the static class exists and that it implements the required interface.
-        if ($creationClassName) {
-            if (!class_exists($creationClassName)) {
+            if (!Util::isValidMigrationClassName($className)) {
                 throw new \InvalidArgumentException(sprintf(
-                    'The class "%s" does not exist',
-                    $creationClassName
+                    'The migration class name "%s" is invalid. Please use CamelCase format.',
+                    $className
                 ));
             }
-            if (!is_subclass_of($creationClassName, self::CREATION_INTERFACE)) {
+
+            // Compute the file path
+            $fileName = Util::mapClassNameToFileName($className);
+            $filePath = $path . DIRECTORY_SEPARATOR . $fileName;
+
+            if (is_file($filePath)) {
                 throw new \InvalidArgumentException(sprintf(
-                    'The class "%s" does not implement the required interface "%s"',
-                    $creationClassName,
-                    self::CREATION_INTERFACE
+                    'The file "%s" already exists',
+                    $filePath
                 ));
             }
+
+            // Get the alternative template and static class options, but only allow one of them.
+            $altTemplate = $input->getOption('template');
+            $creationClassName = $input->getOption('class');
+            if ($altTemplate && $creationClassName) {
+                throw new \InvalidArgumentException('Cannot use --template and --class at the same time');
+            }
+
+            // Verify the alternative template file's existence.
+            if ($altTemplate && !is_file($altTemplate)) {
+                throw new \InvalidArgumentException(sprintf(
+                    'The alternative template file "%s" does not exist',
+                    $altTemplate
+                ));
+            }
+
+            // Verify the static class exists and that it implements the required interface.
+            if ($creationClassName) {
+                if (!class_exists($creationClassName)) {
+                    throw new \InvalidArgumentException(sprintf(
+                        'The class "%s" does not exist',
+                        $creationClassName
+                    ));
+                }
+                if (!is_subclass_of($creationClassName, self::CREATION_INTERFACE)) {
+                    throw new \InvalidArgumentException(sprintf(
+                        'The class "%s" does not implement the required interface "%s"',
+                        $creationClassName,
+                        self::CREATION_INTERFACE
+                    ));
+                }
+            }
+
+            // Determine the appropriate mechanism to get the template
+            if ($creationClassName) {
+                // Get the template from the creation class
+                $creationClass = new $creationClassName();
+                $contents = $creationClass->getMigrationTemplate();
+            } else {
+                // Load the alternative template if it is defined.
+                $contents = file_get_contents($altTemplate ?: $this->getMigrationTemplateFilename());
+            }
+
+            // inject the class names appropriate to this migration
+            $classes = array(
+                '$useClassName' => $this->getConfig()->getMigrationBaseClassName(false),
+                '$className' => $className,
+                '$baseClassName' => $this->getConfig()->getMigrationBaseClassName(true),
+            );
+            $contents = strtr($contents, $classes);
+
+            if (false === file_put_contents($filePath, $contents)) {
+                throw new \RuntimeException(sprintf(
+                    'The file "%s" could not be written to',
+                    $path
+                ));
+            }
+
+            // Do we need to do the post creation call to the creation class?
+            if ($creationClassName) {
+                $creationClass->postMigrationCreation($filePath, $className, $this->getConfig()->getMigrationBaseClassName());
+            }
+
+            $output->writeln('<info>using migration base class</info> ' . $classes['$useClassName']);
+
+            if (!empty($altTemplate)) {
+                $output->writeln('<info>using alternative template</info> ' . $altTemplate);
+            } elseif (!empty($creationClassName)) {
+                $output->writeln('<info>using template creation class</info> ' . $creationClassName);
+            } else {
+                $output->writeln('<info>using default template</info>');
+            }
+
+            $output->writeln('<info>created</info> .' . str_replace(getcwd(), '', $filePath));
         }
-
-        // Determine the appropriate mechanism to get the template
-        if ($creationClassName) {
-            // Get the template from the creation class
-            $creationClass = new $creationClassName();
-            $contents = $creationClass->getMigrationTemplate();
-        } else {
-            // Load the alternative template if it is defined.
-            $contents = file_get_contents($altTemplate ?: $this->getMigrationTemplateFilename());
-        }
-
-        // inject the class names appropriate to this migration
-        $classes = array(
-            '$useClassName'  => $this->getConfig()->getMigrationBaseClassName(false),
-            '$className'     => $className,
-            '$baseClassName' => $this->getConfig()->getMigrationBaseClassName(true),
-        );
-        $contents = strtr($contents, $classes);
-
-        if (false === file_put_contents($filePath, $contents)) {
-            throw new \RuntimeException(sprintf(
-                'The file "%s" could not be written to',
-                $path
-            ));
-        }
-
-        // Do we need to do the post creation call to the creation class?
-        if ($creationClassName) {
-            $creationClass->postMigrationCreation($filePath, $className, $this->getConfig()->getMigrationBaseClassName());
-        }
-
-        $output->writeln('<info>using migration base class</info> ' . $classes['$useClassName']);
-
-        if (!empty($altTemplate)) {
-            $output->writeln('<info>using alternative template</info> ' . $altTemplate);
-        } elseif (!empty($creationClassName)) {
-            $output->writeln('<info>using template creation class</info> ' . $creationClassName);
-        } else {
-            $output->writeln('<info>using default template</info>');
-        }
-
-        $output->writeln('<info>created</info> .' . str_replace(getcwd(), '', $filePath));
     }
 }
