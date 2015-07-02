@@ -28,10 +28,9 @@
  */
 namespace Phinx\Migration;
 
-use Symfony\Component\Console\Output\OutputInterface;
 use Phinx\Config\ConfigInterface;
-use Phinx\Migration\Util;
 use Phinx\Migration\Manager\Environment;
+use Symfony\Component\Console\Output\OutputInterface;
 
 class Manager
 {
@@ -86,8 +85,28 @@ class Manager
             $env = $this->getEnvironment($environment);
             $versions = $env->getVersions();
 
-            foreach ($this->getMigrations() as $migration) {
+            $migrationObjects = $this->getMigrations();
+
+            foreach ($migrationObjects as $migration) {
                 $migration->setAdapter($env->getAdapter());
+            }
+
+            usort($migrationObjects, function ($a, $b) {
+                $versionA = $a->getVersion();
+                $versionB = $b->getVersion();
+                if ($versionA * $versionB == 1) {
+                    return $a->getName() > $b->getName();
+                }
+                if ($versionA < 0) {
+                    return 1;
+                }
+                if ($versionB < 0) {
+                    return -1;
+                }
+                return $a->getVersion() > $b->getVersion();
+            });
+
+            foreach ($migrationObjects as $migration) {
                 if (array_key_exists($migration->getVersion(), $versions)) {
                     $status = '     <info>up</info> ';
                     unset($versions[$migration->getVersion()]);
@@ -123,7 +142,7 @@ class Manager
                     $output->writeln(json_encode($migrations));
                     break;
                 default:
-                    $output->writeln('<info>Unsupported format: '.$format.'</info>');
+                    $output->writeln('<info>Unsupported format: ' . $format . '</info>');
                     break;
             }
         }
@@ -412,7 +431,7 @@ class Manager
                     }
 
                     // instantiate it
-                    $migration = new $class($version);
+                    $migration = new $class();
 
                     if (!($migration instanceof AbstractMigration)) {
                         throw new \InvalidArgumentException(sprintf(
