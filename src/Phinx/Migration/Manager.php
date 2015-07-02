@@ -183,6 +183,14 @@ class Manager
                 ));
                 return;
             }
+
+            if (in_array($version, $versions)) {
+                $this->output->writeln(sprintf(
+                    '<comment>warning</comment> %s is already up',
+                    $version
+                ));
+                return;
+            }
             # Only migrate the specified migration
             $migrations[$version]->setAdapter($env->getAdapter());
             $this->executeMigration($environment, $migrations[$version], MigrationInterface::UP);
